@@ -1,7 +1,7 @@
 ---
 title: "Spread of COVID19 across the World"
 author: "Qingwen, Wang"
-date: "5/3/2020"
+date: "4/26/2020"
 output:
   html_document: default
 ---
@@ -12,7 +12,7 @@ In December 2019, COVID-19 coronavirus was first identified. By March 11, 2020, 
 
 Fortunately, organizations around the world have been collecting data so that CDCs can monitor and learn from this pandemic. Notably, the Johns Hopkins University Center for Systems Science and Engineering created a publicly available data for us to make out how did the virus spread across the globe.   
 
-To answer the question of "Given the history data of confirmed, recovered, and death number, how COVID-19 spread worldwide so far?", I discuss from three perspective: 1. Geographical distribution, 2. COVID-19 situation Changes with Time, 3. What if lockdown ?  
+To answer the question of "Given the history data of confirmed, recovered, and death number, how COVID-19 spread worldwide so far?", I discuss from three perspective: 1. Geographical distribution, 2. COVID-19 situation Changes with Time, 3. How about lockdown policy?  
 
 ```{r include=FALSE}
 library(here)
@@ -133,10 +133,10 @@ names(world_rate) <- c('Date', "Rate","Value")
 ```
 
 
-### How COVID-19 spread across the globe
+### How COVID-19 spread across the world
 
 From this dynamic map, we can find that this disease first outbreaked in China in early February; thousands of people infected in Italy, Iran, and South Korea in early March, and Italy had a outbreak in mid March; meanwhile, the infected number of Asia countries almost stoped; in early April, outbreak occured in America countries and European countries, and infected number keeps increasing. 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.height = 5, fig.width = 9}
 leaflet() %>% 
 
   addProviderTiles("CartoDB") %>% 
@@ -266,9 +266,9 @@ From this interactive plot, we can find that:
 From 2020-1-26 to 2020-4-16, the confirmed cases grows very rapidly, from 555 cases to 2.12 Million. The average growth rate is about 11%, which means every 7 days, the number of infected will double on average. 
 The mortality rate is around 5.5%, which is significantly higher than Seasonal flu, Swine flu or Measles, but lower than SARS(10%) and MERS.
 The recovered rate has a large decrease from mid March, but here we would expect a significant delay in reporting of recovered cases. 
-Here the suggestion is that people should take full attention to this high infection rate disease. Neither easily treat it as a common cold or flu, or be nervous as SARS. Be attention, be calm.
+Here the suggestion is that people should take full attention to this high infection rate disease. Neither easily treat it as a common cold or flu, or be nervous as SARS. 
 
-```{r echo = FALSE}
+```{r echo = FALSE, fig.height = 5, fig.width = 9}
 color1 <- c("Confirmed" = "red", "Recovered" = "lightseagreen", "Death" = "orange" )
 color2 <- c("growth_rate" = "red", "mortality" = "orange", "recovered_rate" = "lightseagreen")
 
@@ -284,7 +284,8 @@ highchart()%>%
 
 ### Spread pattern in early Sprouting countries
 
-Studing the previous case is a good way to better unsterdand the development pattern. Firstly, I filter out countries with large samples.
+Studying the previous case is a good way to better unsterdand the development pattern. <br>
+First, I filter out countries with large samples.
 
 ```{r echo=FALSE}
 options(scipen=10000)
@@ -299,7 +300,7 @@ top_n(trans_con, n=10, total_confirm) %>%
 ```
 
 
-Here I picked out China, and Italy from the top 10 country list of confirmed cases, to discuss their growth rate with the lockdown control.
+Then, I pick out China, and Italy from the top 10 country list of confirmed cases, to discuss their growth rate with the lockdown control.
 
 ```{r echo=FALSE, include= FALSE}
 countries <- c( "Italy", "China")
@@ -319,9 +320,9 @@ for (i in(1 : nrow(sub_country))){
 }
 ```
 
-Day0 is when both China and Italy has around 600 confirmed cases.
-China: lockdown date 01-23-2020, Day0 in the plot with 643 confirmed case.   
-Italy: lockdown date 03-09-2020, Day11 in the plot with 9172 confirmed case.
+Day0 is when both China and Italy has around 600 confirmed cases.<br>
+China: lockdown date 01-23-2020, Day0 in the plot with 643 confirmed case.   <br>
+Italy: lockdown date 03-09-2020, Day11 in the plot with 9172 confirmed case.<br>
 Comparing red line shaded in red, and blue line shaded in blue. We can see that the growth pattern is quite similar, and a obvious decrease trend after around 11 days lockdown.   
 
    
@@ -342,8 +343,13 @@ ggplot(aes(x = Day, y = growth_rate, color = Country.Region), data = sub_country
 
 ```
 
-So, this pandemic is dangerous but controllable if everyone can keep social distance.
-The suggestion here is that, besides ask people to wash hands and take it serious, also we can keep social distance. Everything will be better. We will definitely defeat this together.
+Thus, strict lockdown policy is an effective policy. We can conclude that pandemic is dangerous but still controllable if everyone can strictly keep social distance. <br>
+Any other solution may be possible? <br>
+My suggestions here are based on the idea of lowering two main metrics, which are confirmed case and death rate.<br>
+To lower the confirmed case: 1. keep social distance to lower affected rate; 2. control population mobility by providing shelters or tents to homeless people; 3. wash hands once arrive home<br>
+To lower the death rate: we can give supports like providing pharmacy and grocery delivery service to vulnerable people, including the elders, pregnant people and people with asthma or chronic lung disease;<br> 
+Last, keep the public informed of the lastest COVID situation and be optimistic!
+
 
 ***
 All the data used in this report can be downloaded from github, provided by JHU CSSE.   
