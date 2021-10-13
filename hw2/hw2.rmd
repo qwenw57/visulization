@@ -1,0 +1,119 @@
+---
+title: "ECON631 HW2"
+author: "Qingwen Wang"
+date: "3/23/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Preface/Preamble
+
+You should always have an initial r code chunk that sets up your work environment by loading all the packages you would need for the rest of the document. Fill in the code chunk below.
+
+```{r}
+library(gapminder)
+library(tidyverse)
+library(here)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 5)
+```
+
+## Chapter 3 "Where to Go Next"
+
+**Put `r` code into code chunks and write narrative answers as plain text.**
+
+1. What happens when you put the `geom_smooth()` function before `geom_point()` instead of after it? What does this tell you about how the plot is drawn? Think about how this might be useful when drawing plots.
+
+If we put the `geom_smooth()` function before `geom_point()`, the point layer will be above the gam layer. The plot is drawn layer by layer. It is easy for us to assemble our plot layer by layer depending on what we want to show to data consumers.
+
+```{r}
+plot1 <- ggplot(data = gapminder, mapping = aes(x = gdpPercap,  y = lifeExp))+
+ geom_smooth(method = "gam") + geom_point() + scale_x_log10(labels = scales::dollar)
+plot1
+```
+
+***
+2. Change the mappings in the `aes()` function so that you plot Life Expectancy against population (pop) rather than per capita GDP. What does that look like? What does it tell you about the unit of observation in the dataset?
+
+The points is everywhere in the plot, and do not show the obvious trend.  The population and life expenteny does not have strong relationship.
+
+```{r}
+plot2 <- ggplot(data = gapminder, mapping = aes(x = pop,  y = lifeExp))+
+ geom_point() + geom_smooth(method = "gam") + scale_x_log10()
+plot2
+```
+
+***
+3. Try some alternative scale mappings. Besides `scale_x_log10()` you can try `scale_x_sqrt()` and `scale_x_reverse()`. There are corresponding functions for y-axis transformations. Just write `y` instead of `x`. Experiment with them to see what sort of effect they have on the plot, and whether they make any sense to use.
+
+We can you them to scale data for us better observe the data, and reverse the coordinates if needed.\
+`scale_x_log10()`, `scale_y_log10()` : for log10 transformation \
+`scale_x_sqrt()`, `scale_y_sqrt()` : for sqrt transformation \
+`scale_x_reverse()`, `scale_y_reverse()` : to reverse x/y coordinates \
+
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap,  y = lifeExp))+
+ geom_point() + geom_smooth(method = "gam") 
+
+plot3_1 <- p + scale_x_sqrt()
+plot3_1
+plot3_2 <- p + scale_x_reverse()
+plot3_2
+plot3_3 <- p + scale_y_log10()
+plot3_3
+plot3_4 <- p + scale_y_sqrt()
+plot3_4
+plot3_5 <- p + scale_y_reverse()
+plot3_5
+```
+
+***
+4. What happens if you map `color` to `year` instead of `continent`? Is the result what you expected? Think about what class of object `year` is. Remember you can get a quick look at the top of the data, which includes some shorthand information on the class of each variable, by typing `gapminder`.
+
+The color on the plot is gradient. The class is intrger.
+
+```{r}
+plot4 <- ggplot(data = gapminder, mapping = aes(x = gdpPercap,  y = lifeExp, color = year))+
+ geom_smooth(method = "gam") + geom_point() + scale_x_log10(labels = scales::dollar)
+plot4
+
+head(gapminder)
+```
+
+***
+5. Instead of mapping `color = year`, what happens if you try `color = factor(year)`?
+
+Each year has one color. It is no longer gradient. 
+```{r}
+plot5 <- ggplot(data = gapminder, mapping = aes(x = gdpPercap,  y = lifeExp))+
+ geom_smooth(method = "gam") + geom_point(aes(color = factor(year))) + scale_x_log10(labels = scales::dollar)
+plot5
+```
+
+***
+6. As you look at these different scatterplots, think about Figure 3.13 a little more critically. We worked it up to the point where it was reasonably polished, but is it really the best way to display this country-year data? What are we gaining and losing by ignoring the temporal and country-level structure of the data? How could we do better? Sketch out (in words) what an alternative visualization might look like.
+
+We lose country and year level plot. We can plot by country level and year level. 
+I think maybe we can get a better view by deviding the overall plot into several smaller plots by country and year. 
+
+```{r}
+plot6 <- ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point(alpha = 0.3, size = 3 ) +
+  geom_smooth( method = "gam") +
+  scale_x_log10(labels = scales::dollar) + 
+  labs(title = "Economic Growth and Life Expentancy",
+       subtitle = "Data points are country years", 
+       x = "GDP per Capita", 
+       y = "Life Expentancy in years", 
+       caption = "Source: Gapminder") +
+  facet_wrap(~ year) 
+plot6
+```
+
+***
+7. Save the plot from #5 above using both the `here()` function and the `ggsave()` function.
+
+```{r}
+ggsave(here("figure", "hw2_plot5.jpeg"), plot = plot5)
+```
+

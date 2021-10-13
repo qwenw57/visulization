@@ -1,0 +1,350 @@
+---
+title: "Spread of COVID19 across the World"
+author: "Qingwen, Wang"
+date: "5/3/2020"
+output:
+  html_document: default
+---
+
+### Introduction
+
+In December 2019, COVID-19 coronavirus was first identified. By March 11, 2020, the World Health Organization (WHO) categorized the COVID-19 outbreak as a pandemic. Currently, on date 4 May 2020, 3.53 million people are infected. Pandemic is spreading all over the world, it becomes literately important to understand about this spread.
+
+Fortunately, organizations around the world have been collecting data so that CDCs can monitor and learn from this pandemic. Notably, the Johns Hopkins University Center for Systems Science and Engineering created a publicly available data for us to make out how did the virus spread across the globe.   
+
+To answer the question of "Given the history data of confirmed, recovered, and death number, how COVID-19 spread worldwide so far?", I discuss from three perspective: 1. Geographical distribution, 2. COVID-19 situation Changes with Time, 3. What if lockdown ?  
+
+```{r include=FALSE}
+library(here)
+library(dplyr)
+library(ggplot2)
+library(reshape)
+library(leaflet)
+library(leaftime)
+library(leaflet.extras)
+library(gganimate)
+library(highcharter)
+```
+
+
+***
+```{r include=FALSE}
+# Import the Data Files
+confirmed <- read.csv('time_series_covid19_confirmed_global.csv')
+death <- read.csv('time_series_covid19_deaths_global.csv')
+recovered <- read.csv('time_series_covid19_recovered_global.csv')
+```
+
+```{r include=FALSE}
+head(confirmed)
+head(death)
+head(recovered)
+any(is.na(confirmed))
+any(is.na(death))
+any(is.na(recovered))
+```
+
+```{r include=FALSE}
+trans_con <- confirmed %>% select("Country.Region",X4.16.20, "Lat", "Long") %>% group_by(Country.Region) %>% summarize(sum(X4.16.20))
+colnames(trans_con)[names(trans_con) == "sum(X4.16.20)"] <- "total_confirm"
+position <- confirmed %>% select("Country.Region", "Lat", "Long") %>% group_by(Country.Region) %>%
+  summarize(mean(Lat), mean(Long))
+colnames(position)[names(position) == "mean(Lat)"] <- "Lat"
+colnames(position)[names(position) == "mean(Long)"] <- "Long"
+```
+
+
+```{r include=FALSE}
+
+total <- melt(confirmed, id.vars = c("Province.State", "Country.Region", "Lat", "Long"))
+colnames(total)[5] <- "Date"
+colnames(total)[6] <- "Confirmed"
+total$Date <- gsub("X", "0", total$Date)
+total$Date <- as.Date(total$Date, format="%m.%d.%y")
+
+rev_long <- melt(recovered, id.vars = c("Province.State", "Country.Region", "Lat", "Long"))
+colnames(rev_long)[5] <- "Date"
+colnames(rev_long)[6] <- "Recovered"
+rev_long$Date <- gsub("X", "0", rev_long$Date)
+rev_long$Date <- as.Date(rev_long$Date, format="%m.%d.%y")
+
+dea_long <- melt(death, id.vars = c("Province.State", "Country.Region", "Lat", "Long"))
+colnames(dea_long)[5] <- "Date"
+colnames(dea_long)[6] <- "Death"
+dea_long$Date <- gsub("X", "0", dea_long$Date)
+dea_long$Date <- as.Date(dea_long$Date, format="%m.%d.%y")
+
+total <- merge(total, dea_long, by = c('Province.State', 'Country.Region', 'Lat', 'Long', 'Date'))
+total <- merge(total, rev_long, by = c('Province.State', 'Country.Region', 'Lat', 'Long', 'Date'))
+
+total <- total%>% select('Province.State', 'Country.Region', 'Lat', 'Long','Date','Confirmed', 'Death', 'Recovered') %>% group_by(Country.Region, Date)%>%summarize(mean(Lat), mean(Long), sum(Confirmed), sum(Recovered), sum(Death))%>%ungroup()
+
+names(total) <- c('Country.Region', 'Date', 'Lat', 'Long', 'Confirmed', 'Recovered', 'Death')
+
+total$Lat[total$Country.Region == "France"]  <-  46.2276
+total$Long[total$Country.Region == "France"]  <- 2.2137
+
+```
+
+
+```{r include=FALSE}
+
+every14days <- seq(
+  from = min(total$Date), 
+  to = max(total$Date), 
+  by = 14
+)
+```
+
+```{r include=FALSE}
+# subset by every 14 days
+Jan_22 <- total %>% filter(Date == every14days[1])
+Feb_05 <- total %>% filter(Date == every14days[2])
+Feb_19 <- total %>% filter(Date == every14days[3])
+Mar_04 <- total %>% filter(Date == every14days[4])
+Mar_18 <- total %>% filter(Date == every14days[5])
+Apr_01 <- total %>% filter(Date == every14days[6])
+Apr_15 <- total %>% filter(Date == every14days[7])
+
+```
+
+
+
+```{r include=FALSE}
+world_data <- total%>% select("Date", "Confirmed", "Recovered", "Death") %>%group_by(Date) %>% summarize(sum(Confirmed),sum(Recovered), sum(Death)) 
+names(world_data) <- c('Date', "Confirmed", "Recovered","Death") 
+world_data <- as.data.frame(world_data)
+world_data_long <- melt(world_data, id.vars = "Date")
+names(world_data_long) <- c('Date', "Cases", "Number") 
+```
+
+```{r include=FALSE}
+for (i in(1 : nrow(world_data))){
+    ifelse(i == 1, world_data$growth_rate[i] <- 0, ifelse(i == nrow(world_data), world_data$growth_rate[i] <- world_data$growth_rate[i-1], world_data$growth_rate[i] <- round((world_data$Confirmed[i+1] - world_data$Confirmed[i])/world_data$Confirmed[i],2)    ))
+    world_data$mortality[i]<- round(world_data$Death[i] / world_data$Confirmed[i],2)
+    world_data$recovered_rate[i]<- round(world_data$Recovered[i] / world_data$Confirmed[i],2)
+}
+```
+
+```{r include=FALSE}
+world_trans <- world_data[,c(1,5,6,7)]
+world_rate <- melt(world_trans, id.vars = "Date")
+names(world_rate) <- c('Date', "Rate","Value") 
+```
+
+
+### How COVID-19 spread across the globe
+
+From this dynamic map, we can find that this disease first outbreaked in China in early February; thousands of people infected in Italy, Iran, and South Korea in early March, and Italy had a outbreak in mid March; meanwhile, the infected number of Asia countries almost stoped; in early April, outbreak occured in America countries and European countries, and infected number keeps increasing. 
+```{r echo=FALSE}
+leaflet() %>% 
+
+  addProviderTiles("CartoDB") %>% 
+  setView(lng = 0, lat = 10, zoom = 1.5) %>% 
+  addCircleMarkers(
+    group = "22 Jan", 
+    data = Jan_22, 
+    lng = ~ Long,
+    lat = ~ Lat, 
+    radius = ~ log(Confirmed + 1) * 1.3, 
+    color = "#7b1230", 
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0), 
+    stroke = FALSE, 
+    label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+  ) %>% 
+  addCircleMarkers(
+    group = "05 Feb",
+    data = Feb_05,
+    lng = ~ Long,
+    lat = ~ Lat,
+    radius = ~ log(Confirmed + 1) * 1.3,
+    color = "#7b1230",
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0),
+    stroke = FALSE,
+   label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+  ) %>%
+  addCircleMarkers(
+    group = "19 Feb",
+    data = Feb_19,
+    lng = ~ Long,
+    lat = ~ Lat,
+    radius = ~ log(Confirmed + 1) * 1.3,
+    color = "#7b1230",
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0),
+    stroke = FALSE,
+   label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+  ) %>%
+  addCircleMarkers(
+    group = "04 Mar",
+    data = Mar_04,
+    lng = ~ Long,
+    lat = ~ Lat,
+    radius = ~ log(Confirmed + 1)* 1.3,
+    color = "#7b1230",
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0),
+    stroke = FALSE,
+    label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+  ) %>%
+  addCircleMarkers(
+    group = "18 Mar",
+    data = Mar_18,
+    lng = ~ Long,
+    lat = ~ Lat,
+    radius = ~ log(Confirmed + 1) *1.3,
+    color = "#7b1230",
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0),
+    stroke = FALSE,
+   label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+  ) %>%
+  addCircleMarkers(
+    group = "01 Apr",
+    data = Apr_01,
+    lng = ~ Long,
+    lat = ~ Lat,
+    radius = ~ log(Confirmed + 1)* 1.3,
+    color = "#7b1230",
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0),
+    stroke = FALSE,
+    label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+  ) %>%
+  addCircleMarkers(
+    group = "15 Apr",
+    data = Apr_15,
+    lng = ~ Long,
+    lat = ~ Lat,
+    radius = ~ log(Confirmed + 1)^1.3 ,
+    color = "#7b1230",
+    fillOpacity = ~ ifelse(Confirmed > 0, 0.8, 0),
+    stroke = FALSE,
+   label = ~ paste0(Country.Region,
+                    '<br/>',"Confirmed: ", Confirmed,
+                    '<br/>', ' Death: ', Death,  
+                    '<br/>',"Recovered: ", Recovered, sep = '<br/>') %>% lapply(htmltools::HTML),
+    
+    popup = ~ paste0( Country.Region)
+ 
+  ) %>%
+  addLayersControl(
+    baseGroups = c("22 Jan", "05 Feb", "19 Feb", "04 Mar", "18 Mar", "01 Apr", "15 Apr"), 
+    position = "bottomleft", 
+    options = layersControlOptions(collapsed = TRUE)
+  ) %>% 
+  addResetMapButton()
+```
+
+From this interactive plot, we can find that:   
+From 2020-1-26 to 2020-4-16, the confirmed cases grows very rapidly, from 555 cases to 2.12 Million. The average growth rate is about 11%, which means every 7 days, the number of infected will double on average. 
+The mortality rate is around 5.5%, which is significantly higher than Seasonal flu, Swine flu or Measles, but lower than SARS(10%) and MERS.
+The recovered rate has a large decrease from mid March, but here we would expect a significant delay in reporting of recovered cases. 
+Here the suggestion is that people should take full attention to this high infection rate disease. Neither easily treat it as a common cold or flu, or be nervous as SARS. Be attention, be calm.
+
+```{r echo = FALSE}
+color1 <- c("Confirmed" = "red", "Recovered" = "lightseagreen", "Death" = "orange" )
+color2 <- c("growth_rate" = "red", "mortality" = "orange", "recovered_rate" = "lightseagreen")
+
+highchart()%>%
+        hc_yAxis_multiples(list(title = list(text = " "), lineWidth = 0), list(title = list(text = " "), opposite = T)) %>% 
+        hc_add_series(data = world_data_long, type = "column", hcaes(x = Date, y = Number, group = Cases), color = color1) %>% 
+        hc_add_series(data = world_rate, type = "spline", hcaes(x = Date, y= Value, group = Rate), color = color2,  yAxis = 1)%>%
+        hc_title(text = "History of COVID-19 cases") %>%
+        hc_subtitle(text = "from 2020-1-26 to 2020-4-16, source: JHU CSSE ") %>%
+        hc_xAxis(type = "datetime", title = list(text = " "), showLastLabel = T)
+
+```
+
+### Spread pattern in early Sprouting countries
+
+Studing the previous case is a good way to better unsterdand the development pattern. Firstly, I filter out countries with large samples.
+
+```{r echo=FALSE}
+options(scipen=10000)
+top_n(trans_con, n=10, total_confirm) %>% 
+  ggplot(., aes(x = reorder(Country.Region, total_confirm), y = total_confirm, fill = total_confirm)) + 
+  geom_bar(stat="identity") +
+  scale_fill_gradient2(low="white", mid = "#e2849f", high="#7b1230")+ 
+  coord_flip()+
+  labs( x = '', y = "Total confirmed cases", title = "Covid19 top 10 confirmed countries", caption = "Source: JHU CSSE", subtitle = "Time range: 01/22/2020 to 04/16/2020")+
+  theme_bw()+
+  theme(legend.position =  "none")
+```
+
+
+Here I picked out China, and Italy from the top 10 country list of confirmed cases, to discuss their growth rate with the lockdown control.
+
+```{r echo=FALSE, include= FALSE}
+countries <- c( "Italy", "China")
+sub_country <- total[total$Country.Region %in% countries, ]
+
+for (i in(1 : nrow(sub_country))){
+    ifelse(sub_country$Country.Region[i] == "China", sub_country$Day[i] <- sub_country$Date[i] - as.Date("2020-01-23"), sub_country$Day[i] <- sub_country$Date[i] - as.Date("2020-02-27"))
+}
+sub_country <- sub_country[sub_country$Day >= 0 & sub_country$Day < 50,]
+```
+
+```{r echo = FALSE}
+for (i in(1 : nrow(sub_country))){
+    ifelse(sub_country$Day[i]== 0, sub_country$growth_rate[i] <- 0, ifelse(sub_country$Day[i]== 49 , sub_country$growth_rate[i] <- sub_country$growth_rate[i], sub_country$growth_rate[i] <- round((sub_country$Confirmed[i+1] - sub_country$Confirmed[i])/sub_country$Confirmed[i],2)    ))
+    sub_country$mortality[i]<- round(sub_country$Death[i] / sub_country$Confirmed[i],2)
+    sub_country$recovered_rate[i]<- round(sub_country$Recovered[i] / sub_country$Confirmed[i],2)
+}
+```
+
+Day0 is when both China and Italy has around 600 confirmed cases.
+China: lockdown date 01-23-2020, Day0 in the plot with 643 confirmed case.   
+Italy: lockdown date 03-09-2020, Day11 in the plot with 9172 confirmed case.
+Comparing red line shaded in red, and blue line shaded in blue. We can see that the growth pattern is quite similar, and a obvious decrease trend after around 11 days lockdown.   
+
+   
+```{r echo = FALSE}
+ggplot(aes(x = Day, y = growth_rate, color = Country.Region), data = sub_country)+
+    geom_rect(aes(xmin=0, xmax=10, ymin=0, ymax=1), fill="#ffd3d3", alpha= 0.05, inherit.aes = FALSE) +
+  geom_rect(aes(xmin=11, xmax=21, ymin=0, ymax=1), fill="#CAF4F1", alpha=0.01, inherit.aes = FALSE) +
+  geom_line(size =1)+
+  theme_bw()+
+  labs( x = 'Days', y = ' ', title = "China vs. Italy growth rate", caption = "Source: JHU CSSE", subtitle = "50 days from first 600 cases", color = " ")+
+  theme_bw()+
+  theme(legend.position =  "bottom")+
+  scale_y_continuous(labels = scales::percent)+
+  annotate("text", x = 3.2, y = 0, label = "Lockdown", color = "#c55262")+
+  annotate("text", x = 11, y = 0.08, label = "Lockdown", color = "#357F7A") +
+  geom_point(aes(x = 11, y = 0.11 ), color = "#357F7A")+
+  geom_point(aes(x = 0, y = 0), color = "#c55262")
+
+```
+
+So, this pandemic is dangerous but controllable if everyone can keep social distance.
+The suggestion here is that, besides ask people to wash hands and take it serious, also we can keep social distance. Everything will be better. We will definitely defeat this together.
+
+***
+All the data used in this report can be downloaded from github, provided by JHU CSSE.   
+https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series   

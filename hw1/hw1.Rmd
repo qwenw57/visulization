@@ -1,0 +1,310 @@
+---
+title: "ECON631 HW1"
+author: "Qingwen Wang"
+date: '2020-03-16'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r install, eval = FALSE}
+
+## This code will not be evaluated automatically.
+## (Notice the eval = FALSE declaration in the options section of the
+## code chunk)
+# 
+# my_packages <- c("tidyverse", "broom", "coefplot", "cowplot",
+#                  "gapminder", "GGally", "ggrepel", "ggridges", "gridExtra",
+#                  "here", "interplot", "margins", "maps", "mapproj",
+#                  "mapdata", "MASS", "quantreg", "rlang", "scales",
+#                  "survey", "srvyr", "viridis", "viridisLite", "devtools","socviz")
+# 
+# install.packages(my_packages, repos = "http://cran.rstudio.com")
+
+```
+
+```{r setup, include=FALSE}
+
+## By defult, show code for all chunks in the knitted document,
+## as well as the output. To override for a particular chunk
+## use echo = FALSE in its options.
+knitr::opts_chunk$set(echo = TRUE) 
+
+## Set the default size of figures
+knitr::opts_chunk$set(fig.width=8, fig.height=5)  
+
+## Load the libraries we will be using
+library(gapminder)
+library(here)
+library(socviz)
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_minimal())
+```
+
+```{r look}
+gapminder
+```
+
+## Look at Data
+
+```{r}
+plot <- ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp, fill = continent), color = continent) +
+  geom_point(alpha = 0.4, size = 3 ) +
+  geom_smooth(method = "loess") +
+  scale_x_log10(labels = scales::dollar) + 
+  labs(title = "Economic Growth and Life Expentancy",
+       subtitle = "Data points are country years", 
+       x = "GDP per Capita", 
+       y = "Life Expentancy in years", 
+       caption = "Source: Gapminder")
+plot
+# ggsave("my_figure.pdf", plot = plot)
+# ggsave(here("figure","myfigure.png"), plot = plot)
+```
+
+```{r}
+ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp), color = "green") +
+  geom_point() + geom_smooth()
+
+```
+
+
+```{r}
+ggplot(data = gapminder, mapping = aes( x = year, y = gdpPercap)) +
+  geom_line(aes(group =country))+
+  facet_wrap(~continent, ncol = 5)+
+  scale_y_log10(labels = scales::dollar)+
+  geom_smooth()
+```
+
+```{r}
+ggplot(data = gss_sm, aes(x = age, y = childs))+ 
+         geom_point() +
+         geom_smooth() + 
+         facet_grid(sex ~race)
+
+```
+
+```{r}
+ggplot(data = gss_sm, aes(x = bigregion))+ 
+         geom_bar(aes(y = ..prop.., group = "any constant"))
+
+```
+
+```{r}
+ggplot(data = gss_sm, aes(x = religion, fill = religion))+ 
+         geom_bar()+
+# to remove the guides
+         guides(fill = FALSE)
+```
+
+```{r}
+ggplot(data = midwest, aes(x = area, fill= state, color = state))+
+  geom_line(stat = "density")
+```
+
+```{r}
+ggplot(data = midwest, aes(x = area, fill= state, color = state))+
+  geom_density(alpha = 0.3, aes(y = ..scaled..))
+```
+
+```{r}
+titanic
+```
+
+```{r}
+# stat = 'identity' to do plot with a summarized table.
+# fill is a kind of group method with color.
+
+ggplot(data = titanic, aes(x = fate, y= percent, fill = sex))+
+  geom_bar(position = 'dodge', stat = 'identity')
+```
+
+```{r}
+ggplot(data = oecd_sum, aes(x = year, y = diff, fill = hi_lo))+
+  geom_bar(stat = 'identity') + 
+  guides(fill = FALSE)
+```
+
+```{r}
+# position : 
+    # stack : stack on 
+    # dodge : side by Side
+    # fill : overlap
+# position = 'fill' shows proportions
+plot_fill <- ggplot(data = gss_sm, aes(x = bigregion, fill = religion))+
+  geom_bar(position = "fill")
+
+# position = 'stack' shows counts, and stack is the default position for geom_bar()
+plot_stack <- ggplot(data = gss_sm, aes(x = bigregion, fill = religion))+
+  geom_bar(position = "stack")
+
+plot_fill
+plot_stack
+```
+
+
+```{r}
+plot_fill <- ggplot(data = gss_sm, aes(x = bigregion, fill = religion))+
+  geom_bar(position = "fill")
+```
+
+
+## Chapter 6: Work with Models
+```{r}
+ggplot(gapminder,aes(x = log(gdpPercap), y= lifeExp))+
+  geom_point(alpha = 0.2) + 
+  geom_smooth(color = "tomato", fill = "tomato", method = "lm")+
+  geom_smooth(color = "steelblue", fill = "steelblue", method = "lm")
+```
+
+```{r}
+
+model_colors <- RColorBrewer::brewer.pal(3, "Set1")
+p0 <- ggplot(data = gapminder, mapping = aes(x = log(gdpPercap), y = lifeExp))
+
+p1 <- p0 + geom_point(alpha = 0.2) +
+
+  geom_smooth(method = "lm", aes(color = "OLS", fill = "OLS")) +
+
+  geom_smooth(method = "lm", formula = y ~ splines::bs(x, df = 3), aes(color = "Cubic Spline", fill = "Cubic Spline")) +
+
+  geom_smooth(method = "loess", aes(color = "LOESS", fill = "LOESS"))+
+scale_color_manual(name = "Models", values = model_colors) +
+scale_fill_manual(name = "Models", values = model_colors) +
+theme(legend.position = "top")
+
+p1
+
+```
+
+### Maps
+```{r}
+library(maps)
+```
+
+
+```{r}
+us_states <- map_data("state")
+head(us_states)
+```
+
+```{r}
+library(gganimate)
+```
+
+
+```{r}
+
+party_colors <- c("#2E74C0", "#CB454A")
+p0 <- ggplot(data = subset(election, st %nin% "DC"), mapping = aes(x = r_points, y = reorder(state, r_points),
+color = party))
+p1 <- p0 + geom_vline(xintercept = 0, color = "gray30") +
+geom_point(size = 2)
+p2 <- p1 + scale_color_manual(values = party_colors)
+p3 <-  p2 + scale_x_continuous(breaks = c(-30, -20, -10, 0, 10, 20, 30, 40),
+labels = c("30\n (Clinton)", "20", "10", "0",
+"10", "20", "30", "40\n(Trump)"))
+p3 + facet_wrap(~ census, ncol=2, scales="free_y") +
+guides(color=FALSE) + labs(x = "Point Margin", y = "") +
+theme(axis.text=element_text(size=8))
+
+```
+
+
+```{r}
+library(maps)
+us_states <- map_data("state")
+
+p <- ggplot(data = us_states, mapping = aes(x = long, y = lat, group = group, fill = region))
+p + geom_polygon( color = "white")+ guides(fill = F)+
+coord_map(projection = "albers", lat0 = 39, lat1 = 45)
+```
+
+
+```{r}
+election$region <- tolower(election$state)
+us_states_elec <- left_join(us_states, election)
+```
+
+```{r}
+p0 <- ggplot(data = us_states_elec,
+mapping = aes(x = long, y = lat,
+group = group, fill = party))
+p1 <- p0 + geom_polygon(color = "gray90", size = 0.1) +
+coord_map(projection = "albers", lat0 = 39, lat1 = 45)
+p2 <- p1 + scale_fill_manual(values = party_colors) +
+labs(title = "Election Results 2016", fill = NULL)
+p2 
+```
+
+
+
+```{r}
+p0<- ggplot(data = us_states_elec,
+mapping = aes(x = long, y = lat, group = group, fill = pct_trump))
+p1 <- p0 + geom_polygon(color = "gray90", size = 0.1) +
+coord_map(projection = "albers", lat0 = 39, lat1 = 45)
+p1 + labs(title = "Trump vote") + theme_map() + labs(fill = "Percent")
+p2 <- p1 + scale_fill_gradient(low = "white", high = "#CB454A") +
+labs(title = "Trump vote")
+p2 + theme_map() + labs(fill = "Percent")
+```
+
+
+```{r}
+county_full <- left_join(county_map, county_data, by = "id")
+```
+
+```{r}
+p <-  ggplot(data = county_full,
+mapping = aes(x = long, y = lat,
+fill = pop_dens,
+group = group))
+p1 <- p + geom_polygon(color = "gray90", size = 0.05) + coord_equal()
+p2 <- p1 + scale_fill_brewer(palette="Blues", labels = c("0-10", "10-50", "50-100", "100-500","500-1,000", "1,000-5,000", ">5,000"))
+p2 + labs(fill = "Population per\nsquare mile") +
+theme_map() +
+guides(fill = guide_legend(nrow = 1)) +
+theme(legend.position = "bottom")
+```
+
+
+
+```{r}
+library(ggrepel)
+p0 <- ggplot(data = drop_na(opiates, division_name),
+mapping = aes(x = year, y = adjusted))
+p1 <- p0 + geom_line(color = "gray70",
+mapping = aes(group = state))
+p2 <- p1 + geom_smooth(mapping = aes(group = division_name),
+se = FALSE)
+p3 <- p2 + geom_text_repel(data = subset(opiates,
+year == max(year) & abbr !="DC"), mapping = aes(x = year, y = adjusted, label = abbr),
+size = 1.8, segment.color = NA, nudge_x = 30) +
+coord_cartesian(c(min(opiates$year), max(opiates$year)))
+p3 + labs(x = "", y = "Rate per 100,000 population",
+title = "State-Level Opiate Death Rates by Census Division, 1999-2014") +
+facet_wrap(~ reorder(division_name, -adjusted, na.rm = TRUE), nrow = 3)
+```
+
+
+```{r}
+fredts_m <- fredts %>% select(date, sp500_i, monbase_i) %>% gather(key = series, value = score, sp500_i:monbase_i)
+fredts_m
+```
+
+```{r}
+p <- ggplot(data = fredts_m, mapping = aes(x = date, y = score, group = series, color = series))
+p1 <-  p + geom_line() + theme(legend.position = "top") +
+  labs(x = "Date", y = "Index", color = "Series")
+p <- ggplot(data = fredts, mapping = aes(x = date, y = sp500_i - monbase_i))
+p2 <- p + geom_line() +
+labs(x = "Date", y = "Difference")
+p1
+p2
+cowplot::plot_grid(p1, p2, nrow = 2, rel_heights = c(0.75, 0.25),
+align = "v")
+```
+
